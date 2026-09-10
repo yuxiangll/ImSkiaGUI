@@ -30,4 +30,4 @@ tests/*.txt
 !sdk/lib/skia.dll.lib
 
 
-skills/
+.skills/
