@@ -1,5 +1,9 @@
 # SkiaGUI — Skia + DX12 注入式 Overlay（类 ImGui 的即时模式 UI）+ Canvas2D 移植层
 
+## 我真受不了这个项目了，都是AI写的，现在项目特别混乱
+
+
+
 用**预编译的 `skia.dll` 当渲染引擎**，通过 MinHook 注入到 D3D11/D3D12 宿主进程，
 在宿主画面上叠印 Skia 绘制的界面。所有源码在 `src/`，参考项目在 `ref/`，
 架构说明在 `docs/architecture.md`，Canvas2D 移植说明在 `docs/canvas-api.md`。
