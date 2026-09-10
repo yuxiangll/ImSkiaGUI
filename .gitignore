@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------------------
+#  目录约定（见 AGENTS.md §2）：
+#    bin/              所有 exe（+ skia.dll 一份）
+#    output/shared/    构建出来的 dll / lib（+ skia.dll 一份）
+#    output/obj/       中间目标文件
+#    output/artifacts/ 截图 / 日志 / 测试产物
+#    scripts/          所有 .bat / .ps1
+# ---------------------------------------------------------------------------
+
+# build outputs: executables live in bin/, everything built lives in output/
+bin/*.exe
+bin/*.pdb
+output/
+build-cmake/
+build-vs/
+out/
+
+# stray artefacts that used to land next to the sources
+tests/bin/
+tests/*.png
+tests/*.jpg
+tests/*.webp
+tests/*.svg
+tests/*.log
+tests/*.txt
+*.obj
+
+# keep the SDK binaries tracked if this folder ever becomes a repo
+!sdk/bin/skia.dll
+!sdk/lib/skia.dll.lib
+
+
+skills/
