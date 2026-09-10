@@ -1,0 +1,72 @@
+# Use bullseye's more recent tools to compile dependencies, then switch to buster as the
+# final container's environment to maximize glibc backward compatability:
+#   - buster: glibc 2.28
+#   - bullseye: glibc 2.31
+
+# --------------------------------------------------------------------------------------------------------
+
+FROM debian:bullseye-slim AS git
+
+RUN apt-get update && apt-get install -y -q \
+    wget curl gpg software-properties-common pkg-config \
+    build-essential libssl-dev libcurl4-gnutls-dev gettext \
+    zlib1g-dev libpcre2-dev libexpat1-dev
+
+# upgrade git to a version that can handle skia's submodules correctly
+ARG GIT_VERSION=2.50.1
+ARG GIT_URL=https://github.com/git/git/archive/refs/tags/v$GIT_VERSION.tar.gz
+RUN curl -sL $GIT_URL | tar xz -C /opt && \
+    cd /opt/git-$GIT_VERSION && \
+    NO_TCLTK=1 make -j 12 prefix=/usr/local install
+
+# --------------------------------------------------------------------------------------------------------
+
+FROM debian:bullseye-slim AS dependencies
+
+RUN apt-get update && apt-get install -y -q \
+    git perl curl wget gpg software-properties-common pkg-config \
+    build-essential ninja-build cmake python3-venv lsb-release \
+    libexpat1-dev libpng-dev
+
+# install clang v18
+ARG LLVM_VERSION=18
+COPY install-llvm.sh .
+RUN bash install-llvm.sh $LLVM_VERSION
+
+# manually build freetype & fontconfig and install fontconfig in /usr/local
+COPY ./install-fontlibs.sh /opt
+COPY ./freetype.cfg /opt
+RUN bash /opt/install-fontlibs.sh
+
+# move the static libs to a common location consistent across glibc & musl builds
+RUN mkdir -p /opt/skia-static-libs && \
+    cp /usr/local/lib/*/libfontconfig.a /opt/skia-static-libs
+
+# --------------------------------------------------------------------------------------------------------
+
+FROM node:buster-slim AS skia-build-env
+ARG TARGETARCH
+
+COPY sources.list-buster /etc/apt/sources.list
+
+RUN apt-get update && apt-get install -y -q \
+  curl wget perl zip software-properties-common lsb-release build-essential ninja-build fonts-dejavu-core
+
+# install clang v18
+ARG LLVM_VERSION=18
+COPY install-llvm.sh .
+RUN bash install-llvm.sh $LLVM_VERSION
+
+# install gh
+ARG GH_VERSION=2.76.2
+ARG GH_URL=https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VERSION}_linux_$TARGETARCH.tar.gz
+RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
+
+# copy over results of previous build stage
+COPY --from=git /usr/local /usr/local
+COPY --from=dependencies /usr/local /usr/local
+COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
+
+WORKDIR /opt
+
+CMD ["bash"]

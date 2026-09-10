@@ -1,0 +1,141 @@
+name: Compile binaries
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    runs-on: ${{ matrix.arch == 'x64' && 'macos-13' || 'macos-14' }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Use Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+
+    - name: Use Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Build module
+      env:
+        MACOSX_DEPLOYMENT_TARGET: 10.14
+      run: make optimized
+
+    - name: Add to release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        npm test && npm run upload
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    runs-on: ${{ matrix.arch == 'x64' && 'windows-latest' || 'windows-11-arm' }}
+
+    steps:
+    - name: Enable long paths
+      run: git config --system core.longpaths true
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20 # the minimum version that supports arm64 & `node --test`
+
+    - name: Use Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+
+    - name: Install Ninja
+      run: choco install ninja
+
+    - name: Build module
+      run: make optimized
+
+    - name: Add to release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        npm config set script-shell bash
+        npm test && npm run upload
+
+
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64]
+        libc: [glibc, musl]
+    runs-on: ${{ matrix.arch == 'x64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
+    container:
+      image: ${{ format('ghcr.io/{0}-{1}:latest', github.repository, matrix.libc) }}
+
+    steps:
+    - name: Install rust
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        echo CARGO_TERM_COLOR=always >> $GITHUB_ENV
+
+    - name: Checkout skia-canvas
+      env:
+        SERVER: ${{ github.server_url }}
+        REPO: ${{ github.repository }}
+        REF: ${{ github.ref_name }}
+      run: |
+        git clone --depth 1 --branch $REF ${SERVER}/${REPO} skia-canvas
+
+    - name: Checkout rust-skia and apply static deps patch
+      run: |
+        export TAG=$(make -sC skia-canvas skia-version)
+        git clone --depth 1 --branch $TAG --recurse-submodules -j8 https://github.com/rust-skia/rust-skia.git
+        patch -d rust-skia -p1 -F10 < ./skia-canvas/containers/use-static-fontconfig.patch
+
+    - name: Build module
+      run: |
+        make -sC skia-canvas with-local-skia
+        cd skia-canvas && make optimized
+
+    - name: Add to release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        cd skia-canvas && npm test && npm run upload
+
+    - name: Add AWS layer to release
+      if: ${{ matrix.libc == 'glibc' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        export SRC_DIR="$GITHUB_WORKSPACE/skia-canvas"
+        export SRC_DIST="$SRC_DIR/$(cd $SRC_DIR; npm pack)"
+        export LAYER_DIR="$GITHUB_WORKSPACE/layer"
+        export LAYER_ZIP="$GITHUB_WORKSPACE/aws-lambda-${{ matrix.arch }}.zip"
+        export PKG_VERSION=v$(cd $SRC_DIR; npm pkg get version | tr -d '"')
+
+        mkdir -p $LAYER_DIR/nodejs
+        cd $LAYER_DIR/nodejs && \
+           npm install --ignore-scripts $SRC_DIST && \
+           cp $SRC_DIR/lib/skia.node ./node_modules/skia-canvas/lib
+        cd $LAYER_DIR && \
+           zip -r9 $LAYER_ZIP nodejs/node_modules
+        gh release -R samizdatco/skia-canvas upload $PKG_VERSION $LAYER_ZIP

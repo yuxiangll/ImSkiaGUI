@@ -1,0 +1,19 @@
+# SkiaConfigVersion.cmake — version file for the prebuilt skia.dll package.
+set(PACKAGE_VERSION "146.0.0")
+
+if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+  set(PACKAGE_VERSION_COMPATIBLE TRUE)
+  if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+    set(PACKAGE_VERSION_EXACT TRUE)
+  endif()
+endif()
+
+# The prebuilt binaries are Windows x64 only.
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(PACKAGE_VERSION_UNSUITABLE TRUE)
+endif()
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(PACKAGE_VERSION_UNSUITABLE TRUE)
+endif()

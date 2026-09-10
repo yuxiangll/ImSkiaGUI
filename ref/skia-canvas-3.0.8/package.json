@@ -1,0 +1,68 @@
+{
+  "name": "skia-canvas",
+  "version": "3.0.8",
+  "description": "A multi-threaded, GPU-accelerated, Canvas API for Node",
+  "author": "Christian Swinehart <drafting@samizdat.co>",
+  "license": "MIT",
+  "homepage": "https://skia-canvas.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samizdatco/skia-canvas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/samizdatco/skia-canvas/issues"
+  },
+  "main": "./lib/index.js",
+  "exports": {
+    "node": {
+      "import": "./lib/index.mjs",
+      "require": "./lib/index.js"
+    },
+    "browser": "./lib/browser.js",
+    "types": "./lib/index.d.ts"
+  },
+  "scripts": {
+    "build": "node lib/prebuild.mjs compile",
+    "install": "node lib/prebuild.mjs download --or-compile",
+    "upload": "node lib/prebuild.mjs upload",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "detect-libc": "^2.1.1",
+    "follow-redirects": "^1.15.11",
+    "https-proxy-agent": "^7.0.6",
+    "string-split-by": "^1.0.0"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.19.4",
+    "@types/node": "^24.5.2",
+    "cargo-cp-artifact": "^0.1",
+    "hono": "^4.9.8",
+    "nock": "^14.0.10",
+    "tmp": "^0.2.5"
+  },
+  "files": [
+    "lib/*js",
+    "lib/*ts",
+    "lib/classes/*js",
+    "lib/fonts"
+  ],
+  "keywords": [
+    "canvas",
+    "gpu",
+    "skia",
+    "offscreen",
+    "headless",
+    "graphic",
+    "graphics",
+    "image",
+    "images",
+    "compositing",
+    "render",
+    "vulkan",
+    "metal",
+    "pdf",
+    "svg",
+    "rust"
+  ]
+}

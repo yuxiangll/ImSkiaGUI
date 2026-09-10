@@ -1,0 +1,35 @@
+skia.dll — build information
+============================
+
+Skia source        : C:\Users\Administrator\skia\skia
+Skia commit        : 34aa71b8bee4648a442b7125680232d803374f19 (2026-02-09)
+Skia milestone     : 146
+Source patches     : skia_compile skia.2026-02-10.src.zip
+
+Compiler           : LLVM 23.1.0 clang-cl  (C:\Program Files\LLVM\bin\clang-cl.exe)
+Linker             : lld-link 23.1.0        (C:\Program Files\LLVM\bin\lld-link.exe)
+MSVC headers/libs  : Visual Studio 2022 Community, MSVC 14.44.35207
+Windows SDK        : 10.0.26100.0
+Build system       : GN (skia\bin\gn.exe) + Ninja 1.13.2
+
+Target             : x64, Release
+GN args            : see skia_build_args.gn
+  is_component_build = true   -> skia target becomes shared_library (SKIA_DLL + SKIA_IMPLEMENTATION)
+  is_official_build  = true
+  is_trivial_abi     = false
+  codecs             : zlib, libpng, libjpeg-turbo, libwebp (in-tree, skia_use_system_* = false)
+  enabled            : SK_GANESH, SK_GL, SVG/XML (expat), DirectWrite font manager
+  disabled           : PDF, XPS, ICU, Wuffs, DNG, Graphite, D3D backend
+
+CRT                : static (/MT) — no VC runtime DLL dependency
+Exported symbols   : 3892
+File size          : 7,315,456 bytes (6.98 MB)
+Import DLLs        : KERNEL32.dll, USER32.dll, ole32.dll, OPENGL32.dll
+                     (DirectWrite is loaded at runtime via LoadLibrary)
+
+Verified with      : dsh\output\skia-dll\test\smoke_test.exe    (raster + PNG + JPEG)
+                     dsh\output\skia-dll\test\boundary_MT.exe   (std::unique_ptr across DLL)
+                     dsh\output\skia-dll\test\boundary_MD.exe
+                     skiagui\bin\skiagui_demo.exe --offscreen   (full UI frame -> PNG)
+
+Full build log     : dsh\output\skia-dll\build_skia_dll.log
